@@ -8,6 +8,21 @@ from database import database
 db = database()
 
 
+def get_user_id_header():
+    """
+    Read the caller's user id from the request headers.
+
+    Accepts both "user_id" and "user-id". Headers containing underscores are
+    dropped by many HTTP servers and proxies, so a client following the
+    documented "user_id" spelling over real HTTP would otherwise always get
+    a 400 back.
+
+    Returns:
+        str | None: The user id, or None if neither header was sent.
+    """
+    return request.headers.get("user_id") or request.headers.get("user-id")
+
+
 @app.route("/api/v1/books/<book_id>/reserve", methods=["POST"])
 def reserve_book(book_id: str):
     """
@@ -23,7 +38,7 @@ def reserve_book(book_id: str):
         BadRequest: If user_id header is missing or book is already reserved
         NotFound: If the book or user is not found
     """
-    user_id = request.headers.get("user_id")
+    user_id = get_user_id_header()
     if not user_id:
         return jsonify({"error": "Missing user_id header"}), 400
 
@@ -48,6 +63,9 @@ def reserve_book(book_id: str):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    # is_reserved is what db.json and the frontend read, so it has to move in
+    # step with reserved_by — otherwise a reserved book still shows as available.
+    book["is_reserved"] = True
     book["reserved_by"] = user_id
     book["reservation_date"] = datetime.now().isoformat()
     db.save_books(books)
@@ -72,7 +90,7 @@ def cancel_reservation(book_id: str):
         BadRequest: If user_id header is missing or book is not reserved by user
         NotFound: If the book is not found
     """
-    user_id = request.headers.get("user_id")
+    user_id = get_user_id_header()
     if not user_id:
         return jsonify({"error": "Missing user_id header"}), 400
 
@@ -84,7 +102,9 @@ def cancel_reservation(book_id: str):
     if book.get("reserved_by") != user_id:
         return jsonify({"error": "Book is not reserved by this user"}), 400
 
-    book.pop("reserved_by", None)
+    # Reset rather than delete, so every book keeps the same shape
+    book["is_reserved"] = False
+    book["reserved_by"] = None
     book.pop("reservation_date", None)
     db.save_books(books)
 
@@ -107,7 +127,7 @@ def get_user_reservations(user_id: str):
         NotFound: If the user is not found
         Forbidden: If requesting user is not the same as target user
     """
-    requesting_user_id = request.headers.get("user_id")
+    requesting_user_id = get_user_id_header()
     if not requesting_user_id:
         return jsonify({"error": "Missing user_id header"}), 400
 

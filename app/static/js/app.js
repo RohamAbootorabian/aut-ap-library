@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+// Relative path: the frontend is served by the same Flask app as the API,
+// so this works on any port and any host. A hardcoded http://localhost:8080
+// broke as soon as the app ran on a different port, or when something else
+// was already using 8080.
+const API_BASE_URL = '/api/v1';
 
 // Navigation
 document.querySelectorAll('.nav-link').forEach(link => {
@@ -79,7 +83,7 @@ async function loadReservations(userId) {
     try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/reservations`, {
             headers: {
-                'user_id': userId
+                'user-id': userId
             }
         });
         const reservations = await response.json();
@@ -166,7 +170,7 @@ async function reserveBook(bookId) {
         const response = await fetch(`${API_BASE_URL}/books/${bookId}/reserve`, {
             method: 'POST',
             headers: {
-                'user_id': userId
+                'user-id': userId
             }
         });
 
@@ -192,7 +196,7 @@ async function cancelReservation(bookId) {
         const response = await fetch(`${API_BASE_URL}/books/${bookId}/reserve`, {
             method: 'DELETE',
             headers: {
-                'user_id': userId
+                'user-id': userId
             }
         });
 
