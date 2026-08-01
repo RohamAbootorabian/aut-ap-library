@@ -52,14 +52,25 @@ def create_book():
     Raises:
         BadRequest: If the request body is invalid
     """
-    new_book = request.json
-    if not new_book or "id" not in new_book or "title" not in new_book:
-        return jsonify({"error": "Invalid book data"}), 400
+    payload = request.json
+    required = ("title", "author", "isbn")
+    if not payload or any(not payload.get(field) for field in required):
+        return jsonify({"error": "title, author and isbn are required"}), 400
 
     books = db.get_all_books()
-    if any(b["id"] == new_book["id"] for b in books):
-        return jsonify({"error": "Book with this ID already exists"}), 400
 
+    # The server owns id assignment — clients should not have to invent one,
+    # and letting them pick invites collisions.
+    next_id = str(max((int(b["id"]) for b in books if str(b["id"]).isdigit()), default=0) + 1)
+
+    new_book = {
+        "id": next_id,
+        "title": payload["title"],
+        "author": payload["author"],
+        "isbn": payload["isbn"],
+        "is_reserved": False,
+        "reserved_by": None,
+    }
     books.append(new_book)
     db.save_books(books)
     return jsonify(new_book), 201

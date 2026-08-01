@@ -52,15 +52,25 @@ def create_user():
     Raises:
         BadRequest: If the request body is invalid
     """
-    new_user = request.json
-    if not new_user or "id" not in new_user or "title" not in new_user:
-        return jsonify({"error": "Invalid user data"}), 400
+    payload = request.json
+    required = ("username", "name", "email")
+    if not payload or any(not payload.get(field) for field in required):
+        return jsonify({"error": "username, name and email are required"}), 400
 
-    books = db.get_all_users()
-    if any(b["id"] == new_user["id"] for b in users):
-        return jsonify({"error": "user with this ID already exists"}), 400
+    users = db.get_all_users()
+    if any(u["username"] == payload["username"] for u in users):
+        return jsonify({"error": "Username already taken"}), 400
 
-    books.append(new_user)
+    next_id = str(max((int(u["id"]) for u in users if str(u["id"]).isdigit()), default=0) + 1)
+
+    new_user = {
+        "id": next_id,
+        "username": payload["username"],
+        "name": payload["name"],
+        "email": payload["email"],
+        "reserved_books": [],
+    }
+    users.append(new_user)
     db.save_users(users)
     return jsonify(new_user), 201
 
