@@ -58,15 +58,27 @@ async function loadBooks() {
 // Users
 async function loadUsers() {
     try {
-        const response = await fetch(`${API_BASE_URL}/users`);
-        const users = await response.json();
+        // Books carry reserved_by, which is the single source of truth for who
+        // holds what. Counting from there keeps the column honest — the
+        // user.reserved_books field is never written to and always reads 0.
+        const [usersResponse, booksResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/users`),
+            fetch(`${API_BASE_URL}/books`)
+        ]);
+        const users = await usersResponse.json();
+        const books = await booksResponse.json();
+
+        const reservedCount = userId =>
+            books.filter(book => book.reserved_by === userId).length;
+
         const usersList = document.getElementById('users-list');
         usersList.innerHTML = users.map(user => `
             <tr>
+                <td><code>${user.id}</code></td>
                 <td>${user.username}</td>
                 <td>${user.name}</td>
                 <td>${user.email}</td>
-                <td>${user.reserved_books.length}</td>
+                <td>${reservedCount(user.id)}</td>
                 <td>
                     <button class="btn btn-sm btn-primary btn-action" onclick="editUser('${user.id}')">Edit</button>
                 </td>
