@@ -5,13 +5,23 @@
 const API_BASE_URL = '/api/v1';
 
 // Navigation
+// The open section is kept in the URL hash, so a refresh stays where you were
+// and the browser's back button moves between sections.
+const SECTIONS = ['books', 'users', 'reservations'];
+const DEFAULT_SECTION = 'books';
+
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
         const section = e.target.dataset.section;
-        showSection(section);
+        window.location.hash = section;   // triggers hashchange -> showSection
     });
 });
+
+function sectionFromHash() {
+    const hash = window.location.hash.replace('#', '');
+    return SECTIONS.includes(hash) ? hash : DEFAULT_SECTION;
+}
 
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
@@ -23,6 +33,8 @@ function showSection(sectionId) {
     document.getElementById(`${sectionId}-section`).classList.add('active');
     document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
 }
+
+window.addEventListener('hashchange', () => showSection(sectionFromHash()));
 
 // Books
 async function loadBooks() {
@@ -257,6 +269,7 @@ document.getElementById('view-reservations').addEventListener('click', () => {
     loadReservations(userId);
 });
 
-// Initial load
+// Initial load — restore whichever section the URL points at
+showSection(sectionFromHash());
 loadBooks();
-loadUsers(); 
+loadUsers();
