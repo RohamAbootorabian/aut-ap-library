@@ -37,12 +37,49 @@ function showSection(sectionId) {
 window.addEventListener('hashchange', () => showSection(sectionFromHash()));
 
 // Books
+// The fetched lists are kept here so searching can filter in memory rather
+// than re-querying the API on every keystroke.
+let allBooks = [];
+let allUsers = [];
+
+function bookMatches(book, query) {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return [book.title, book.author, book.isbn, book.id]
+        .some(field => String(field ?? '').toLowerCase().includes(q));
+}
+
+function userMatches(user, query) {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return [user.username, user.name, user.email, user.id]
+        .some(field => String(field ?? '').toLowerCase().includes(q));
+}
+
 async function loadBooks() {
     try {
         const response = await fetch(`${API_BASE_URL}/books`);
-        const books = await response.json();
-        const booksList = document.getElementById('books-list');
-        booksList.innerHTML = books.map(book => `
+        allBooks = await response.json();
+        renderBooks();
+    } catch (error) {
+        console.error('Error loading books:', error);
+        alert('Error loading books. Please try again.');
+    }
+}
+
+function renderBooks() {
+    const query = document.getElementById('books-search')?.value.trim() ?? '';
+    const books = allBooks.filter(book => bookMatches(book, query));
+    const booksList = document.getElementById('books-list');
+
+    if (books.length === 0) {
+        booksList.innerHTML = `<tr><td colspan="5" class="text-center text-muted">${
+            query ? `No books match “${query}”.` : 'No books yet.'
+        }</td></tr>`;
+        return;
+    }
+
+    booksList.innerHTML = books.map(book => `
             <tr>
                 <td>${book.title}</td>
                 <td>${book.author}</td>
@@ -60,11 +97,7 @@ async function loadBooks() {
                     <button class="btn btn-sm btn-danger btn-action" onclick="deleteBook('${book.id}')">Delete</button>
                 </td>
             </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading books:', error);
-        alert('Error loading books. Please try again.');
-    }
+    `).join('');
 }
 
 // Users
@@ -77,14 +110,31 @@ async function loadUsers() {
             fetch(`${API_BASE_URL}/users`),
             fetch(`${API_BASE_URL}/books`)
         ]);
-        const users = await usersResponse.json();
-        const books = await booksResponse.json();
+        allUsers = await usersResponse.json();
+        allBooks = await booksResponse.json();
+        renderUsers();
+    } catch (error) {
+        console.error('Error loading users:', error);
+        alert('Error loading users. Please try again.');
+    }
+}
 
-        const reservedCount = userId =>
-            books.filter(book => book.reserved_by === userId).length;
+function renderUsers() {
+    const query = document.getElementById('users-search')?.value.trim() ?? '';
+    const users = allUsers.filter(user => userMatches(user, query));
+    const usersList = document.getElementById('users-list');
 
-        const usersList = document.getElementById('users-list');
-        usersList.innerHTML = users.map(user => `
+    const reservedCount = userId =>
+        allBooks.filter(book => book.reserved_by === userId).length;
+
+    if (users.length === 0) {
+        usersList.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${
+            query ? `No users match “${query}”.` : 'No users yet.'
+        }</td></tr>`;
+        return;
+    }
+
+    usersList.innerHTML = users.map(user => `
             <tr>
                 <td><code>${user.id}</code></td>
                 <td>${user.username}</td>
@@ -95,11 +145,7 @@ async function loadUsers() {
                     <button class="btn btn-sm btn-primary btn-action" onclick="editUser('${user.id}')">Edit</button>
                 </td>
             </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading users:', error);
-        alert('Error loading users. Please try again.');
-    }
+    `).join('');
 }
 
 // Reservations
@@ -352,6 +398,21 @@ document.getElementById('view-reservations').addEventListener('click', () => {
         return;
     }
     loadReservations(userId);
+});
+
+// Search
+// Filtering happens against the already-fetched lists, so results appear as
+// you type without hitting the API again.
+document.getElementById('books-search').addEventListener('input', renderBooks);
+document.getElementById('users-search').addEventListener('input', renderUsers);
+
+document.getElementById('books-search-clear').addEventListener('click', () => {
+    document.getElementById('books-search').value = '';
+    renderBooks();
+});
+document.getElementById('users-search-clear').addEventListener('click', () => {
+    document.getElementById('users-search').value = '';
+    renderUsers();
 });
 
 // Initial load — restore whichever section the URL points at
