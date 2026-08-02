@@ -1,346 +1,191 @@
 # Library Management System
 
-A simple library management system built with Flask that allows users to manage books and handle book reservations.
+A REST API for managing a library — books, users, and book reservations — built with Flask, plus a browser UI for working with it.
 
-## Table of Contents
+Written for the Advanced Programming course at Amirkabir University of Technology (Tehran Polytechnic).
 
-- [Features](#features)
-- [Learning Objectives](#learning-objectives)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Project Structure](#project-structure)
-- [Running the Application](#running-the-application)
-- [Running Tests](#running-tests)
-- [Data Storage](#data-storage)
-- [API Documentation](#api-documentation)
-- [Frontend](#frontend)
-- [Notes](#notes)
+```
+GET  /api/v1/books                    →  list the catalogue
+POST /api/v1/books/1/reserve          →  reserve a book  (header: user-id)
+GET  /api/v1/users/1/reservations     →  what user 1 is holding
+```
 
 ## Features
 
-- Book Management (Create, Read, Delete)
-- User Management (Create, Read, Update)
-- Book Reservation System
-- Simple JSON-based storage
-- OpenAPI/Swagger Documentation
+- **Books** — list, fetch, create and delete, with server-assigned ids
+- **Users** — list, fetch, create, update and delete, with unique usernames
+- **Reservations** — reserve and return a book, with a per-user reservation list
+- **Validation** — required fields checked, duplicate usernames rejected, meaningful HTTP status codes on every path
+- **Web UI** — a single-page frontend served by the same app, with live search over books and users
+- **JSON persistence** — no database server to install; state lives in `db.json`
+- **OpenAPI spec** — every endpoint described in `swagger.yaml`
 
-## Learning Objectives
+## What I built
 
-This project is designed to help students learn and practice:
+The course provided a skeleton: route signatures whose bodies returned empty
+placeholders (`return jsonify({"books": []})`), the OpenAPI spec, the test
+suite, and a seed `db.json`.
 
-1. **Backend Development**
+Everything that makes it work is mine — roughly 1,000 lines:
 
-   - RESTful API design and implementation
-   - HTTP methods and status codes
-   - Request/response handling
-   - Data validation and error handling
+- **`database.py`** — the persistence layer, written from scratch: reading and writing `db.json`, creating it if absent, and surviving a missing or malformed file
+- **Every endpoint body** — the CRUD logic, validation, reservation rules and error handling behind all 12 routes
+- **The entire frontend** — `index.html`, `app.js` and `style.css`; the skeleton had no UI at all
+- **`PUT /users/{id}`** — documented in the spec but never implemented, so I added it
 
-2. **Flask Framework**
+## Getting started
 
-   - Route handling and blueprints
-   - Request processing
-   - Response formatting
-   - Application structure
+Requires Python 3.13+.
 
-3. **Testing**
-
-   - Unit testing with pytest
-   - API endpoint testing
-   - Test organization and structure
-   - Mocking and test fixtures
-
-4. **API Documentation**
-
-   - OpenAPI/Swagger specification
-   - API endpoint documentation
-   - Request/response schema documentation
-   - Interactive API testing
-
-5. **Project Structure**
-
-   - Python package organization
-   - Module separation
-   - Code reusability
-   - Clean code practices
-
-6. **Data Management**
-   - JSON data handling
-   - CRUD operations
-   - Data persistence
-   - State management
-
-## Prerequisites
-
-- Python 3.x
-- uv (Python package installer)
-- Flask
-
-## Installation
-
-1. Install uv (if not already installed):
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-2. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd library
-```
-
-3. Create and activate virtual environment using uv:
-
-```bash
-uv venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-```
-
-4. Install dependencies:
+**With [uv](https://github.com/astral-sh/uv):**
 
 ```bash
 uv sync
-```
-
-## Project Structure
-
-```
-library/
-├── README.md
-├── main.py                 # Application entry point
-├── pyproject.toml         # Project configuration
-├── swagger.yaml           # API documentation
-├── db.json               # JSON-based database
-├── app/                  # Application package
-│   ├── __init__.py
-│   ├── application.py    # Application factory
-│   └── routes/          # Route handlers
-│       ├── __init__.py
-│       ├── books.py     # Book management routes
-│       ├── users.py     # User management routes
-│       └── reservation.py # Book reservation routes
-├── tests/               # Test suite
-│   ├── __init__.py
-│   ├── test_books.py
-│   ├── test_users.py
-│   └── test_reservations.py
-└── .venv/              # Virtual environment (not tracked in git)
-```
-
-## Running the Application
-
-1. Start the Flask server:
-
-```bash
 uv run main.py
 ```
 
-2. The application will be available at `http://localhost:8080`
-
-## Running Tests
+**With plain Python:**
 
 ```bash
-uv run python -m pytest
+pip install flask flask-cors
+python3 main.py
 ```
 
-## Data Storage
+Open **http://localhost:8080** for the web UI, or call the API directly at
+`http://localhost:8080/api/v1`.
 
-The application uses a `db.json` file as both its database and sample data. This file contains two main sections:
+To run on a different port:
 
-- `users`: Stores user information
-- `books`: Stores book information
-
-Important notes about data storage:
-
-- No additional database setup is required
-- The `db.json` file serves as both the sample data and the database
-- All operations (create, update, delete) will modify this file directly
-- Make sure to keep a backup of this file if you want to preserve your data
-- The file is automatically updated with every operation that modifies data
-
-## API Documentation
-
-The API is documented using OpenAPI/Swagger specification. You can find the complete API documentation in `swagger.yaml`. The documentation includes:
-
-- Detailed endpoint descriptions
-- Request/response schemas
-- Authentication requirements
-- Error responses
-- Example requests and responses
-
-### Base URL
-
-All API endpoints are prefixed with: `http://localhost:8080/api/v1`
-
-### Authentication
-
-The API uses a simple header-based authentication:
-
-- Header: `user_id`
-- Required for: Book reservations and user-specific operations
-
-### API Endpoints
-
-#### Books API
-
-| Method | Endpoint      | Description      | Headers Required | Request Body | Response        |
-| ------ | ------------- | ---------------- | ---------------- | ------------ | --------------- |
-| GET    | `/books`      | List all books   | None             | None         | List of books   |
-| GET    | `/books/{id}` | Get book details | None             | None         | Book details    |
-| POST   | `/books`      | Create new book  | None             | Book details | Created book    |
-| DELETE | `/books/{id}` | Delete a book    | None             | None         | Success message |
-
-#### Users API
-
-| Method | Endpoint      | Description      | Headers Required | Request Body         | Response      |
-| ------ | ------------- | ---------------- | ---------------- | -------------------- | ------------- |
-| GET    | `/users`      | List all users   | None             | None                 | List of users |
-| GET    | `/users/{id}` | Get user details | None             | None                 | User details  |
-| POST   | `/users`      | Create new user  | None             | User details         | Created user  |
-| PUT    | `/users/{id}` | Update user      | None             | Updated user details | Updated user  |
-
-#### Reservations API
-
-| Method | Endpoint                   | Description             | Headers Required | Request Body | Response               |
-| ------ | -------------------------- | ----------------------- | ---------------- | ------------ | ---------------------- |
-| GET    | `/users/{id}/reservations` | Get user's reservations | user_id          | None         | List of reserved books |
-| POST   | `/books/{id}/reserve`      | Reserve a book          | user_id          | None         | Reservation details    |
-| DELETE | `/books/{id}/reserve`      | Cancel a reservation    | user_id          | None         | Success message        |
-
-### Request/Response Examples
-
-#### Book Object
-
-```json
-{
-  "id": "1",
-  "title": "The Great Gatsby",
-  "author": "F. Scott Fitzgerald",
-  "isbn": "978-0743273565",
-  "is_reserved": false,
-  "reserved_by": null
-}
+```bash
+python3 -c "from app import app; app.run(port=5001)"
 ```
 
-#### User Object
+## Project structure
 
-```json
-{
-  "id": "1",
-  "username": "john_doe",
-  "name": "John Doe",
-  "email": "john@example.com",
-  "reserved_books": []
-}
+```
+main.py                  entry point
+database.py              persistence layer over db.json
+db.json                  seed data (2 users, 3 books)
+swagger.yaml             OpenAPI 3.0 specification
+app/
+  application.py         Flask app, CORS, static file serving
+  routes/
+    books.py             book endpoints
+    users.py             user endpoints
+    reservation.py       reserve / return / list reservations
+  static/
+    index.html           web UI
+    js/app.js            frontend logic
+    css/style.css        styling
+tests/
+  test_books.py
+  test_users.py
+  test_reservations.py
 ```
 
-## Using Swagger Documentation
+Routes are separated from data access, so the storage layer could be swapped
+for a real database without touching the endpoint code.
 
-The API documentation is available in Swagger/OpenAPI format. Here's how to use it:
+## API reference
 
-1. **Viewing the Documentation**:
+Base URL: `http://localhost:8080/api/v1`
 
-   - Open `swagger.yaml` in a text editor to view the raw specification
-   - For a better experience, use an online Swagger editor:
-     - Visit [Swagger Editor](https://editor.swagger.io/)
-     - Copy and paste the contents of `swagger.yaml`
-     - The documentation will be rendered in an interactive format
+### Books
 
-2. **Interactive Testing**:
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/books` | List all books |
+| `GET` | `/books/{id}` | Get one book |
+| `POST` | `/books` | Create a book — requires `title`, `author`, `isbn` |
+| `DELETE` | `/books/{id}` | Delete a book |
 
-   - In the Swagger Editor, you can:
-     - View all available endpoints
-     - See request/response schemas
-     - Test API endpoints directly from the interface
-     - View example requests and responses
+### Users
 
-3. **Understanding the Documentation**:
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/users` | List all users |
+| `GET` | `/users/{id}` | Get one user |
+| `POST` | `/users` | Create a user — requires `username`, `name`, `email` |
+| `PUT` | `/users/{id}` | Update a user |
+| `DELETE` | `/users/{id}` | Delete a user |
 
-   - Each endpoint is documented with:
-     - HTTP method (GET, POST, PUT, DELETE)
-     - Path parameters
-     - Query parameters
-     - Request body schema
-     - Response schemas
-     - Authentication requirements
-     - Example values
+### Reservations
 
-4. **Using the Documentation**:
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/books/{id}/reserve` | Reserve a book |
+| `DELETE` | `/books/{id}/reserve` | Return a book |
+| `GET` | `/users/{id}/reservations` | List a user's reservations |
 
-   - Click on any endpoint to expand its details
-   - Use the "Try it out" button to test endpoints
-   - Fill in the required parameters
-   - Execute the request and view the response
-   - Copy the generated curl command for use in your application
+Reservation endpoints identify the caller with a **`user-id` request header**.
 
-5. **Common Sections**:
-   - `/books`: Book management endpoints
-   - `/users`: User management endpoints
-   - `/reservations`: Book reservation endpoints
+> Send it as `user-id`, not `user_id`. Headers containing underscores are
+> dropped in transit by many servers and proxies, so the underscored spelling
+> arrives as no header at all and the request is rejected with a 400.
 
-Note: When testing endpoints that require authentication, make sure to include the `user_id` header in your requests.
+Ids are assigned by the server on create — clients do not supply them.
 
-## Frontend
+### Example
 
-The application includes a modern, user-friendly web interface built with HTML, CSS, and JavaScript. The frontend provides the following features:
+```bash
+# reserve a book
+curl -X POST -H "user-id: 1" http://localhost:8080/api/v1/books/1/reserve
 
-1. **Book Management**
+# see what that user is holding
+curl -H "user-id: 1" http://localhost:8080/api/v1/users/1/reservations
 
-   - View all books in a table format
-   - Add new books
-   - Delete books
-   - Reserve and cancel book reservations
+# return it
+curl -X DELETE -H "user-id: 1" http://localhost:8080/api/v1/books/1/reserve
+```
 
-2. **User Management**
+### Status codes
 
-   - View all users
-   - Add new users
-   - Edit user information
-   - View user's reserved books
+| Code | Meaning |
+|---|---|
+| `200` | Success |
+| `201` | Created |
+| `400` | Missing or invalid fields, duplicate username, book already reserved |
+| `403` | Requesting another user's reservations |
+| `404` | Book or user not found |
+| `500` | Could not read the data file |
 
-3. **Reservation Management**
-   - View reservations by user ID
-   - Cancel reservations
-   - See reservation status for each book
+## Web UI
 
-### Using the Frontend
+The frontend is served from the same Flask app at `/`, so there is nothing
+separate to start. It covers:
 
-1. Start the Flask server:
+- Browsing books with availability status, and reserving or returning them
+- Adding and deleting books
+- Adding and editing users, with their live reservation count
+- Viewing a user's reservations
+- **Search** across both tables, filtering as you type over every visible field
+- Section state kept in the URL hash, so a refresh stays where you were
 
-   ```bash
-   uv run main.py
-   ```
+API calls use a relative path, so the UI works on whatever port the app is
+running on.
 
-2. Open your web browser and navigate to:
+## Tests
 
-   ```
-   http://localhost:8080
-   ```
+```bash
+uv run pytest            # or: python3 -m pytest tests/ -v
+```
 
-3. The interface is divided into three main sections:
+## Data storage
 
-   - Books: Manage the library's book collection
-   - Users: Manage user accounts
-   - Reservations: View and manage book reservations
+State is a single `db.json` file, resolved next to `database.py` — so the app
+runs from any working directory, on any machine. Override the location with
+the `DB_PATH` environment variable:
 
-4. **Authentication**
+```bash
+DB_PATH=/tmp/library.json python3 main.py
+```
 
-   - For operations that require authentication (like reserving books), you'll be prompted to enter your user ID
-   - Make sure to keep track of your user ID after creating an account
+This keeps the project dependency-free to run, at the cost of concurrent-write
+safety. Moving to SQLite or Postgres would mean rewriting `database.py` and
+nothing else.
 
-5. **Features**
-   - Responsive design that works on both desktop and mobile devices
-   - Real-time updates when making changes
-   - Clear status indicators for book availability
-   - Intuitive navigation between different sections
-   - Modal forms for adding new books and users
-   - Confirmation dialogs for destructive actions
+## Known limitations
 
-## Notes
-
-- The application runs on `localhost:8080`
-- No authentication is required, but users must provide their `user_id` in the request headers
-- The system prevents deletion of reserved books
-- All endpoints are prefixed with `/api/v1`
-- For detailed API documentation, refer to `swagger.yaml`
+- JSON file storage is not safe under concurrent writes
+- No authentication — the `user-id` header is trusted as sent
+- Reservations have no due dates or history
