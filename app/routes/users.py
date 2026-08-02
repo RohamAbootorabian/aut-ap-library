@@ -75,6 +75,45 @@ def create_user():
     return jsonify(new_user), 201
 
 
+@app.route("/api/v1/users/<user_id>", methods=["PUT"])
+def update_user(user_id: str):
+    """
+    Update a user by id
+
+    Args:
+        user_id (str): The id of the user
+
+    Returns:
+        dict: The updated user
+
+    Raises:
+        BadRequest: If the request body is invalid or the username is taken
+        NotFound: If the user is not found
+    """
+    payload = request.json
+    required = ("username", "name", "email")
+    if not payload or any(not payload.get(field) for field in required):
+        return jsonify({"error": "username, name and email are required"}), 400
+
+    users = db.get_all_users()
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # A username has to stay unique, but the user keeping their own is fine
+    taken = any(
+        u["username"] == payload["username"] and u["id"] != user_id for u in users
+    )
+    if taken:
+        return jsonify({"error": "Username already taken"}), 400
+
+    user["username"] = payload["username"]
+    user["name"] = payload["name"]
+    user["email"] = payload["email"]
+    db.save_users(users)
+    return jsonify(user)
+
+
 @app.route("/api/v1/users/<user_id>", methods=["DELETE"])
 def delete_user(user_id: str):
     """

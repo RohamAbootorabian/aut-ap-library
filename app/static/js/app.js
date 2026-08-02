@@ -175,6 +175,66 @@ document.getElementById('save-book').addEventListener('click', async () => {
     }
 });
 
+// Edit User
+// The Edit button in the users table called this; it was never written, so
+// clicking it only raised a ReferenceError in the console.
+async function editUser(userId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`);
+        const user = await response.json();
+
+        if (!response.ok) {
+            alert(user.error || 'Could not load that user');
+            return;
+        }
+
+        document.getElementById('edit-user-id').value = user.id;
+        document.getElementById('edit-user-username').value = user.username;
+        document.getElementById('edit-user-name').value = user.name;
+        document.getElementById('edit-user-email').value = user.email;
+
+        new bootstrap.Modal(document.getElementById('editUserModal')).show();
+    } catch (error) {
+        console.error('Error loading user:', error);
+        alert('Error loading user. Please try again.');
+    }
+}
+
+document.getElementById('update-user').addEventListener('click', async () => {
+    const userId = document.getElementById('edit-user-id').value;
+    const username = document.getElementById('edit-user-username').value.trim();
+    const name = document.getElementById('edit-user-name').value.trim();
+    const email = document.getElementById('edit-user-email').value.trim();
+
+    if (!username || !name || !email) {
+        alert('Username, name and email are all required');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, name, email })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUsers();
+            alert('User updated successfully!');
+        } else {
+            alert(data.error || 'Error updating user');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        alert('Error updating user. Please try again.');
+    }
+});
+
 // Add User
 document.getElementById('save-user').addEventListener('click', async () => {
     const username = document.getElementById('user-username').value;
