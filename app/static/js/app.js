@@ -110,14 +110,33 @@ async function loadReservations(userId) {
                 'user-id': userId
             }
         });
-        const reservations = await response.json();
+        const data = await response.json();
         const reservationsList = document.getElementById('reservations-list');
-        reservationsList.innerHTML = reservations.map(reservation => `
+
+        // Surface the API's own message (unknown user, forbidden, ...) instead
+        // of a generic failure alert.
+        if (!response.ok) {
+            reservationsList.innerHTML = '';
+            alert(data.error || 'Error loading reservations');
+            return;
+        }
+
+        // The endpoint replies with { reservations: [...] }, and each entry is
+        // a book object — so the fields are title/id, not book_title/book_id.
+        const reservations = data.reservations || [];
+
+        if (reservations.length === 0) {
+            reservationsList.innerHTML =
+                '<tr><td colspan="3" class="text-center text-muted">No reservations for this user.</td></tr>';
+            return;
+        }
+
+        reservationsList.innerHTML = reservations.map(book => `
             <tr>
-                <td>${reservation.book_title}</td>
-                <td>${new Date(reservation.reservation_date).toLocaleString()}</td>
+                <td>${book.title}</td>
+                <td>${book.reservation_date ? new Date(book.reservation_date).toLocaleString() : '—'}</td>
                 <td>
-                    <button class="btn btn-sm btn-danger btn-action" onclick="cancelReservation('${reservation.book_id}')">Cancel</button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="cancelReservation('${book.id}')">Cancel</button>
                 </td>
             </tr>
         `).join('');
@@ -200,6 +219,7 @@ async function reserveBook(bookId) {
 
         if (response.ok) {
             loadBooks();
+            loadUsers();   // the Reserved Books count changes
             alert('Book reserved successfully!');
         } else {
             const error = await response.json();
@@ -226,6 +246,11 @@ async function cancelReservation(bookId) {
 
         if (response.ok) {
             loadBooks();
+            loadUsers();
+            // Cancelling from the Reservations view has to refresh that list
+            // too, otherwise the row stays on screen after it is gone.
+            const openReservationsFor = document.getElementById('user-id').value;
+            if (openReservationsFor) loadReservations(openReservationsFor);
             alert('Reservation cancelled successfully!');
         } else {
             const error = await response.json();

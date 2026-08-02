@@ -13,6 +13,13 @@
             "name": "Jane Smith",
             "email": "jane@example.com",
             "reserved_books": []
+        },
+        {
+            "id": "3",
+            "username": "roham",
+            "name": "roham",
+            "email": "abootorabianamir@gmail.com",
+            "reserved_books": []
         }
     ],
     "books": [
